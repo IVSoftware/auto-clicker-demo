@@ -90,12 +90,6 @@ namespace auto_clicker
                 checkBoxAutoClick.Checked = false;
             }
         }
-
-        [Flags]
-        enum MOUSEEXTRA : uint
-        {
-            AutoClick = 0x40000000,
-        }
         public void autoClick(Control control)
         {
             autoClick(new Point 
@@ -104,9 +98,6 @@ namespace auto_clicker
                 Y =  control.Location.Y + control.Height / 2,
             });
         }
-
-        uint _autoClickCount = 0;
-        bool IsAutoClick => _autoClickCount != 0;
         public void autoClick(Point clientPoint)
         {
             var screen = PointToScreen(clientPoint);
@@ -129,6 +120,9 @@ namespace auto_clicker
                 Debug.Assert(false, "Error: SendInput has failed.");
             }
         }
+
+        [Flags]
+        enum MOUSEEXTRA : uint{ AutoClick = 0x40000000, }
 
 #region P I N V O K E
         [Flags]
