@@ -84,7 +84,7 @@ namespace auto_clicker
                         .OnCompleted(() =>_sslimAutoClick.Release());
 
                     // Interval between auto clicks.
-                    await Task.Delay(TimeSpan.FromSeconds(2));
+                    await Task.Delay(TimeSpan.FromSeconds(1));
                 }
                 checkBoxAutoClick.Enabled = true;
                 checkBoxAutoClick.Checked = false;
