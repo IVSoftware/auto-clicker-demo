@@ -1,8 +1,8 @@
 _This answer consolidates and incorporates information from other SO posts [here](https://stackoverflow.com/a/10355905/5438626) and [here](https://stackoverflow.com/q/22744531/5438626) and [here](https://stackoverflow.com/q/2416748/5438626)._
 
+Your [question](https://stackoverflow.com/q/74721398/5438626) is how to distinguish a physical mouse click from a virtual one. I see that in your code you're using a mouse hook and one way "close the loop" is by examining the `dwExtraInfo` flag in the callback per Gabriel Luci's exellent suggestion'. But what I set out do do is find a threadsafe approach that doesn't rely on a hook to detect auto clicks so I ended up discarding the mouse hook for my testing. And I tried several things, but what I found was most reliable in my testing is to essentially set a ~100 ms watchdog timer using a thread synchronization object (like the easy-to-use `SemaphoreSlim`). This semaphore can be tested by whatever target ultimately consumes the click. All it needs to do is test whether the WDT is has expired by calling Wait(0) on the semaphore and looking at the `bool` return value. 
 
-
-When the checkbox is clicked, that mousedown registers in black followed by 5 autoclicks in blue.
+In the first of two tests, I checked the AutoClick button and let it run. As expected, the physical click shows up in black and the auto clicks show up in blue. The indicators all light up as expected.
 
 ![Screenshot](https://github.com/IVSoftware/auto-clicker-demo/blob/master/auto-clicker/Screenshots/simple.png)
 
@@ -10,4 +10,4 @@ Then to test it out, while the 5x autoclick is running, I did a few manual click
 
 ![Screenshot](https://github.com/IVSoftware/auto-clicker-demo/blob/master/auto-clicker/Screenshots/interspersed.png)
 
-There's too much code to show here but you can [browse](https://github.com/IVSoftware/auto-clicker.git) the full sample code on GitHub. 
+There's too much code to show here but you can [browse](https://github.com/IVSoftware/auto-clicker.git) the full sample code on GitHub.

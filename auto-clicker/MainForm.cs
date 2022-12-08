@@ -44,28 +44,27 @@ namespace auto_clicker
         private void onAnyMouseDown(object sender, EventArgs e)
         {
             var control = (Control)sender;
-            if(IsAutoClick)
+            if(_sslimAutoClick.Wait(0))
             {
-                richTextBox.AppendTextEx($"{control.Location}", color: Color.Blue);
+                // No pending auto click detected
+                try
+                {
+                    richTextBox.AppendTextEx($"{MousePosition}");
+                }
+                finally
+                {
+                    _sslimAutoClick.Release();
+                }
             }
             else
             {
-                richTextBox.AppendTextEx($"{control.Location}");
+                // The settle delay for the auto click hasn't expired yet.
+                richTextBox.AppendTextEx($"{control.Location}", color: Color.Blue);
             }
         }
 
-        private void onWmLButtonDown(MOUSEHOOKSTRUCT mouseInfo)
-        {
-            var autoClick = (MOUSEEXTRA)Convert.ToInt32((ulong)mouseInfo.dwExtraInfo);
-            if (autoClick.HasFlag(MOUSEEXTRA.AutoClick))
-            {
-                richTextBox.AppendTextEx($"{PointToClient(mouseInfo.pt)}", color: Color.Blue);
-            }
-            else
-            {
-                richTextBox.AppendTextEx($"{PointToClient(mouseInfo.pt)}");
-            }
-        }
+        const int SETTLE = 100;
+        SemaphoreSlim _sslimAutoClick = new SemaphoreSlim(1, 1);
         /// <summary>
         /// Responds to the button by auto-clicking 5 times.
         /// </summary>
@@ -76,8 +75,16 @@ namespace auto_clicker
                 checkBoxAutoClick.Enabled = false;
                 foreach (var indicator in indicators)
                 {
+                    await _sslimAutoClick.WaitAsync();
                     autoClick(indicator);
-                    await Task.Delay(TimeSpan.FromSeconds(1));
+                    // Don't await here. It's for the benefit of clients.
+                    Task
+                        .Delay(SETTLE)
+                        .GetAwaiter()
+                        .OnCompleted(() =>_sslimAutoClick.Release());
+
+                    // Interval between auto clicks.
+                    await Task.Delay(TimeSpan.FromSeconds(2));
                 }
                 checkBoxAutoClick.Enabled = true;
                 checkBoxAutoClick.Checked = false;
@@ -100,7 +107,7 @@ namespace auto_clicker
 
         uint _autoClickCount = 0;
         bool IsAutoClick => _autoClickCount != 0;
-        public async void autoClick(Point clientPoint)
+        public void autoClick(Point clientPoint)
         {
             var screen = PointToScreen(clientPoint);
             Cursor.Position = new Point(screen.X, screen.Y);
@@ -121,9 +128,6 @@ namespace auto_clicker
             {
                 Debug.Assert(false, "Error: SendInput has failed.");
             }
-            _autoClickCount++;
-            await Task.Delay(100);
-            _autoClickCount--;
         }
 
 #region P I N V O K E
