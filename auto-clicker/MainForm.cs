@@ -15,34 +15,42 @@ namespace auto_clicker
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            indicators = new CheckBox[]
+            {
+                checkBox1, checkBox2, checkBox3, checkBox4, checkBox5,  
+            };
             IterateControlTree(this, attachMouseDown, null);
-            buttonClear.Click += (sender, e) => richTextBox.Clear();
+            buttonClear.Click += onClear;
             checkBoxAutoClick.CheckedChanged += onAutoClick;
         }
 
+        private void onClear(object sender, EventArgs e)
+        {
+            richTextBox.Clear();
+            foreach (var indicator in indicators)
+            {
+                indicator.Checked = false;
+            }
+        }
+
+        CheckBox[] indicators;
+
         private bool attachMouseDown(Control control, object args)
         {
-            control.MouseDown+= onAnyClick;
+            control.MouseDown+= onAnyMouseDown;
             return true;
         }
 
-        private void onAnyClick(object sender, EventArgs e)
+        private void onAnyMouseDown(object sender, EventArgs e)
         {
             var control = (Control)sender;
-            try
+            if(IsAutoClick)
             {
-                if(_sslimAutoClick.Wait(0))
-                {
-                    richTextBox.AppendTextEx($"{control.Location}");
-                }
-                else
-                {
-                    richTextBox.AppendTextEx($"{control.Location}", color: Color.Blue);
-                }
+                richTextBox.AppendTextEx($"{control.Location}", color: Color.Blue);
             }
-            finally
+            else
             {
-                _sslimAutoClick.Release();
+                richTextBox.AppendTextEx($"{control.Location}");
             }
         }
 
@@ -58,8 +66,6 @@ namespace auto_clicker
                 richTextBox.AppendTextEx($"{PointToClient(mouseInfo.pt)}");
             }
         }
-
-        SemaphoreSlim _sslimAutoClick = new SemaphoreSlim(1, 1);
         /// <summary>
         /// Responds to the button by auto-clicking 5 times.
         /// </summary>
@@ -68,13 +74,9 @@ namespace auto_clicker
             if (checkBoxAutoClick.Checked)
             {
                 checkBoxAutoClick.Enabled = false;
-                for (int i = 1; i <= 5; i++)
+                foreach (var indicator in indicators)
                 {
-                    await _sslimAutoClick.WaitAsync();
-                    richTextBox.AppendTextEx($"{i}", color: Color.Red);
-
-                    var client = new Point(50, 50 + (i * 50));
-                    autoClick(client);
+                    autoClick(indicator);
                     await Task.Delay(TimeSpan.FromSeconds(1));
                 }
                 checkBoxAutoClick.Enabled = true;
@@ -87,8 +89,18 @@ namespace auto_clicker
         {
             AutoClick = 0x40000000,
         }
-        // https://stackoverflow.com/a/10355905/5438626
-        public void autoClick(Point clientPoint)
+        public void autoClick(Control control)
+        {
+            autoClick(new Point 
+            { 
+                X =  control.Location.X + control.Width / 2,
+                Y =  control.Location.Y + control.Height / 2,
+            });
+        }
+
+        uint _autoClickCount = 0;
+        bool IsAutoClick => _autoClickCount != 0;
+        public async void autoClick(Point clientPoint)
         {
             var screen = PointToScreen(clientPoint);
             Cursor.Position = new Point(screen.X, screen.Y);
@@ -105,10 +117,16 @@ namespace auto_clicker
                 inputMouseDown,
                 inputMouseUp,
             };
-            if (0 == SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)))) ;
+            if (0 == SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT))))
+            {
+                Debug.Assert(false, "Error: SendInput has failed.");
+            }
+            _autoClickCount++;
+            await Task.Delay(100);
+            _autoClickCount--;
         }
 
-        #region P I N V O K E
+#region P I N V O K E
         [Flags]
         internal enum MOUSEEVENTF : uint
         {
@@ -170,7 +188,7 @@ namespace auto_clicker
             public UInt32 Time;
             public IntPtr ExtraInfo;
         }
-        #endregion P I N V O K E
+#endregion P I N V O K E
 
         internal delegate bool FxControlDlgt(Control control, Object args);
         internal bool IterateControlTree(Control control, FxControlDlgt fx, Object args)
