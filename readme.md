@@ -20,8 +20,7 @@ For the autoClick methods, I used `SendInput` since `mouse_event` is obsolete (s
     }
     public void autoClick(Point clientPoint)
     {
-        var screen = PointToScreen(clientPoint);
-        Cursor.Position = new Point(screen.X, screen.Y);
+        Cursor.Position = PointToScreen(clientPoint);
 
         var inputMouseDown = new INPUT { Type = Win32Consts.INPUT_MOUSE };
         inputMouseDown.Data.Mouse.Flags = (uint)MOUSEEVENTF.LEFTDOWN;
